@@ -9,5 +9,4 @@ class Question(BaseModel):
 
 @app.post("/pergunta")
 def ask_question(data: Question):
-    answer = ask_rag(data.question)
-    return{"answer": answer}
+    return ask_rag(data.question)

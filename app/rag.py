@@ -29,14 +29,12 @@ def ask_rag(question: str):
     print("3. Buscando documentos...")
     docs = db.similarity_search(question, k=4)
     print(f"Busca: {time.perf_counter() - inicio:.2f}s")
-
     print(f"Documentos encontrados: {len(docs)}")
-    for i, doc in enumerate(docs):
-            print(f"\n--- CHUNK {i} ---")
-            print(doc.page_content)
+    
 
     if not docs:
-        return "Nenhum documento encontrado no ChromaDB."
+        return {"Nenhum documento encontrado no ChromaDB,"
+        "sources": []}
 
     context = "\n\n".join(doc.page_content for doc in docs)
 
@@ -60,4 +58,18 @@ Resposta:
 
     print(f"Geração: {time.perf_counter() - inicio:.2f}s")
     print(f"Resposta: {resposta!r}")
-    return resposta
+    sources = []
+
+    for doc in docs:
+        sources.append({
+                "source": doc.metadata.get(
+                    "source", "fonte desconhecida"
+                ),
+                "content": doc.page_content
+            }
+        )
+
+    return {
+        "answer": resposta.strip(),
+        "sources": sources
+    }

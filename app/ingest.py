@@ -45,7 +45,6 @@ def ingest():
         embedding_function=embeddings
     )
 
-    db.reset_collection()
     db.add_documents(chunks)
 
     print(f"Ingestão concluída: {len(chunks)} chunks criados.")
