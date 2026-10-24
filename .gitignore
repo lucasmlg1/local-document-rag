@@ -1,0 +1,39 @@
+
+---
+
+# 📄 `.gitignore`
+
+```gitignore
+# Ambiente virtual
+.env
+.venv/
+venv/
+
+# Cache Python
+__pycache__/
+*.pyc
+*.pyo
+*.py[cod]
+
+# Arquivos de sistema
+.DS_Store
+
+# IDEs e editores
+.vscode/
+.idea/
+
+
+-
+# Banco vetorial (gerado localmente)
+chroma/
+
+# Logs
+*.log
+
+# Arquivos temporários
+*.tmp
+*.swp
+
+# PDFs e artefatos gerados (opcional)
+# Descomente se não quiser versionar PDFs de exemplo
+# *.pdf
