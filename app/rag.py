@@ -3,44 +3,32 @@ import time
 from langchain_chroma import Chroma
 from langchain_ollama import OllamaEmbeddings, OllamaLLM
 
-llm = OllamaLLM(
-    model="qwen3.5:4b",
-    reasoning=False,
-    num_predict=100,
-    temperature=0.1,
-    repeat_penalty=1.15,
-    keep_alive="10m",
+LLM_MODEL = "qwen3.5:4b"
+EMBED_MODEL = "qwen3-embedding:0.6b"
+
+embeddings = OllamaEmbeddings(
+    model=EMBED_MODEL,
+    keep_alive=1800,
 )
 
-def ask_rag(question: str):
-    inicio = perf_counter()
+llm = OllamaLLM(
+    model=LLM_MODEL,
+    reasoning=False,     
+    num_predict=256,      
+    num_ctx=4096,        
+    temperature=0.1,
+    repeat_penalty=1.15,
+    keep_alive="30m",     
+)
 
-    print("1. Inicializando embeddings...")
-    embeddings = OllamaEmbeddings(
-        model="qwen3-embedding:0.6b"
-    )
-
-    print("2. Abrindo banco vetorial...")
-    db = Chroma(
-        persist_directory="chroma",
-        embedding_function=embeddings
-    )
-
-    print("3. Buscando documentos...")
-    docs = db.similarity_search(question, k=4)
-    print(f"Busca: {time.perf_counter() - inicio:.2f}s")
-    print(f"Documentos encontrados: {len(docs)}")
-    
-
-    if not docs:
-        return {"Nenhum documento encontrado no ChromaDB,"
-        "sources": []}
-
-    context = "\n\n".join(doc.page_content for doc in docs)
-
-    prompt = f"""
+db = Chroma(
+    persist_directory="chroma",
+    embedding_function=embeddings
+)
+PROMPT = """
 Use apenas o contexto abaixo para responder à pergunta.
 Se a resposta não estiver no contexto, diga que não encontrou a informação.
+Responda em português, de forma direta, em no máximo 3 frases.
 
 Contexto:
 {context}
@@ -51,12 +39,29 @@ Pergunta:
 Resposta:
 """
 
-    print("4. Chamando o modelo de linguagem...")
-    llm = OllamaLLM(model="qwen3.5:4b")
+def warmup():
+    """Carrega os dois modelos na memória antes da primeira requisição."""
+    embeddings.embed_query("warmup")
+    llm.invoke("Responda apenas: ok")
+ 
 
+def ask_rag(question: str):
+    tempoInicio = perf_counter()
+
+    docs = db.similarity_search(question, k=4)
+    tempoDeBusca = perf_counter()
+    
+    if not docs:
+        return {"Nenhum documento encontrado no ChromaDB,"
+        "sources": []}
+
+    context = "\n\n".join(doc.page_content for doc in docs)
+    prompt = PROMPT.format(context=context, question=question)
+ 
     resposta = llm.invoke(prompt)
+    tempoFim = perf_counter()
 
-    print(f"Geração: {time.perf_counter() - inicio:.2f}s")
+    print(f"Tempo de Busca: {tempoDeBusca - tempoInicio:.2f}s | Tempo de Geração: {tempoFim - tempoInicio:.2f}s" )
     print(f"Resposta: {resposta!r}")
     sources = []
 
@@ -71,5 +76,11 @@ Resposta:
 
     return {
         "answer": resposta.strip(),
-        "sources": sources
+        "sources": [
+            {
+                "source": doc.metadata.get("source", "fonte desconhecida"),
+                "content": doc.page_content,
+            }
+            for doc in docs
+        ],
     }

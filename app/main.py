@@ -1,6 +1,13 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from pydantic import BaseModel
-from app.rag import ask_rag
+from app.rag import ask_rag, warmup
+ 
+ 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    warmup()  
+    yield
 
 app = FastAPI()
 
